@@ -1,4 +1,7 @@
+import { ensureKey, kvPrefix } from "@/utils";
 import { kv } from "@vercel/kv";
+
+export const dynamic = "force-dynamic";
 
 type Params = {
   key: string[];
@@ -6,21 +9,16 @@ type Params = {
 
 export async function GET(_: Request, context: { params: Params; }) {
   const key = context.params.key.join("/");
-  const dbValue = await kv.get(key);
-  let value: number;
-
-  if (typeof dbValue !== "number") {
-    kv.set(key, 0);
-    value = 0;
-  } else {
-    value = dbValue;
-  }
+  const value = await ensureKey(key);
 
   return Response.json({ value });
 }
 
 export async function POST(_: Request, context: { params: Params; }) {
   const key = context.params.key.join("/");
-  const value = await kv.incr(key);
+  const namespace = context.params.key[0];
+  await kv.incr(`${kvPrefix}${namespace}`);
+  const value = await kv.incr(`${kvPrefix}${key}`);
+
   return Response.json({ value });
 }
